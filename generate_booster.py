@@ -1,53 +1,81 @@
-from mtgsdk import Card
-from mtgsdk import Set
 from get_card_info import get_card_info
+import json
 import random
+import time
+import asyncio
+
+MYTHIC_ODDS = 8
 
 def generate_booster(set_code):
     # Retrieve all cards from the specified set
-    cards = Card.where(set=set_code).all()
+    print("started pack generation")
 
-    pack = []
-    FOIL_ODDS = 67
+    with open('./booster_formats/set_booster.json') as f:
+        setJson = json.load(f)
 
-    # newCommons = Card.where(set=set_code).where(rarity='Common').where(pageSize=10).where(random=10).all()
+    params = []
+    count = 0
+    t0 = time.time()
 
-    # print(Set.find('ktk'))
+    # does booster generate based off of a reference json 
+    # TODO: treatments, foil chances
+    for c in setJson['set_booster']['pack_format']:
+        count += c["cardCount"]
+        newParam = f"set:{set_code} game:paper"
+        if c["type"] == "static":
+            if c["rarity"] == "land":
+                newParam += " type:land"
+            elif c["rarity"] == "rare":
+                newParam += f" rarity:rare"
+            params.append(newParam)
+        elif c["type"] == "spread":
+            outcomes = [event["cards"] for event in c["options"]]
+            probabilities = [event["probability"] for event in c["options"]]
+            selected_event = random.choices(outcomes, weights=probabilities, k=1)[0]
+            for event in selected_event:
+                temp = [newParam + f" rarity:{event["rarity"]}"] * event["count"]
+                params += temp
+        # query = f"type:land set:{set_code} game:paper"
+    # rarity: set: cn: is:foil frame: game:paper
 
-    # Separate cards by rarity
-    commons = [card for card in cards if card.rarity == 'Common' and card.rarity != 'Basic Land']
-    uncommons = [card for card in cards if card.rarity == 'Uncommon']
-    rares = [card for card in cards if card.rarity == 'Rare']
-    mythics = [card for card in cards if card.rarity == 'Mythic']
-    lands = [card for card in cards if card.type == 'Land']
+    #mythic hits 
+    upgradedParams = [chanceMythic(param) for param in params]
 
-    booster_pack = [random.choice(lands)] + random.sample(commons, 10) + random.sample(uncommons, 3) + [random.choice(rares + mythics)]
+    # get cards in parallel
+    url = 'https://api.scryfall.com/cards/random'
+    responses = asyncio.run(get_card_info_async(url, params))
 
-    for card in booster_pack:
-        isFoil = random.randrange(FOIL_ODDS) == 1
+    print("done!")
 
-        priceDollars = 0
-        priceCents = 0
+    random.shuffle(responses)
 
-        # make async
-        card_info = get_card_info(card.name)
-
-        if isFoil and card_info['usd_foil']:
-            priceDollars = int(card_info['usd_foil'][:-3])
-            priceCents = int(card_info['usd_foil'][-2:])
-        elif card_info['usd']:
-            priceDollars = int(card_info['usd'][:-3])
-            priceCents = int(card_info['usd'][-2:])
+    return responses
 
 
-        # print(card_info)
 
-        pack.append({
-            'name': card.name,
-            'foil': isFoil,
-            'dollars': priceDollars,
-            'cents': priceCents,
-            'image': card_info['image']
-        })
 
-    return pack
+def chanceMythic(str):
+    if "rare" in str and random.randrange(MYTHIC_ODDS) == 1:
+        print("hit mythic")
+        return str.replace("rare", "mythic")
+    else:
+        return str
+
+
+def format_card(card_info):
+    isFoil = random.randrange(FOIL_ODDS) == 1
+
+    priceCents = 0
+
+    if isFoil and card_info['usd_foil']:
+        priceCents = int(card_info['usd_foil'][-2:]) + (int(card_info['usd_foil'][:-3]) * 100)
+    elif card_info['usd']:
+        priceCents = int(card_info['usd'][-2:]) + (int(card_info['usd'][:-3]) * 100)
+
+    return {
+        'name': card_info['name'],
+        'foil': isFoil,
+        'cents': priceCents,
+        'rarity': card_info['rarity'],
+        'image': card_info['image']
+    }

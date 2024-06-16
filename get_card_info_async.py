@@ -1,7 +1,7 @@
 import aiohttp
 import asyncio
 
-async def get_card_info(url, query_parameters):
+async def get_card_info_async(url, query_parameters):
     async with aiohttp.ClientSession() as session:
         tasks = [get_data(session, url, params) for params in query_parameters]
         responses = await asyncio.gather(*tasks)
