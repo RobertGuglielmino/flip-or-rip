@@ -5,4 +5,6 @@ t0 = time.time()
 
 booster = generate_booster('MH2')
 
+print(booster)
+
 print(f"{str(time.time() - t0)[:5]} seconds to run function")

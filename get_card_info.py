@@ -9,7 +9,7 @@ async def get_card_info(url, query_parameters):
 
 async def get_data(session, url, params):
     try:
-        async with session.get(url, params=params) as response:
+        async with session.get(url, params="q="+params) as response:
             response.raise_for_status()
             card_data = await response.json()
             ans = {}
