@@ -12,6 +12,8 @@ async def get_data(session, url, params):
         async with session.get(url, params="q="+params) as response:
             response.raise_for_status()
             card_data = await response.json()
+            if 'image_uris' not in card_data:
+                print(card_data)
             ans = {}
             ans['name'] = card_data['name']
             if 'collector_number' in card_data:
@@ -30,6 +32,7 @@ async def get_data(session, url, params):
                 print(card_data)
             if 'image_status' != 'missing':
                 ans['image'] = card_data['image_uris']['normal']
+            ans['generated_as_foil'] = 'is:foil' in params
             return ans
     except aiohttp.ClientError as e:
         print(f'Posting data failed: {e}')

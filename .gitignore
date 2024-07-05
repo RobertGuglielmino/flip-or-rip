@@ -1,0 +1,8 @@
+magic_set_jsons
+__pycache__
+
+uploadToS3Script.py
+test_script.py
+default-cards-20240621210726.json
+idToCardLink.txt
+output2.json
