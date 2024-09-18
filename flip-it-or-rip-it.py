@@ -23,10 +23,9 @@ response = {
   "body": body
 }
 
-# return booster
 
 print(f"{str(time.time() - t0)[:5]} seconds to run function")
-
-
+    
+# return booster
 
 # https://stackoverflow.com/questions/5324647/how-to-merge-a-transparent-png-image-with-another-image-using-pil
